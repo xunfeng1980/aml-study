@@ -1,17 +1,31 @@
-from langchain import LlamaCpp
-from langchain.agents import load_tools
-from langchain.agents import initialize_agent
-from langchain.agents import AgentType
+from langchain import PromptTemplate, LLMChain
+from langchain.llms import GPT4All
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain import PromptTemplate
+from langchain.document_loaders import TextLoader
+from langchain import PromptTemplate
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
-# First, let's load the language model we're going to use to control the agent.
-llm = LlamaCpp(temperature=0)
+from langchain.document_loaders import TextLoader
+from langchain.indexes import VectorstoreIndexCreator
+from langchain.embeddings import HuggingFaceEmbeddings
+from gpt4all.gpt4all import GPT4All
 
-# Next, let's load some tools to use. Note that the `llm-math` tool uses an LLM, so we need to pass that in.
-tools = load_tools(["serpapi", "llm-math"], llm=llm)
 
+# add the path to the CV as a PDF
+loader = TextLoader('data.txt')
+# Embed the document and store into chroma DB
+index = VectorstoreIndexCreator(embedding= HuggingFaceEmbeddings()).from_loaders([loader])
 
-# Finally, let's initialize an agent with the tools, the language model, and the type of agent we want to use.
-agent = initialize_agent(tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True)
+# specify the path to the .bin downloaded file
+local_path = './models/ggml-gpt4all-j-v1.3-groovy.bin'  # replace with your desired local file path
+# Callbacks support token-wise streaming
+callbacks = [StreamingStdOutCallbackHandler()]
+# Verbose is required to pass to the callback manager
+llm = GPT4All(model=local_path, callbacks=callbacks, verbose=True, backend='gptj')
 
-# Now let's test it out!
-agent.run("What was the high temperature in SF yesterday in Fahrenheit? What is that number raised to the .023 power?")
+results = index.vectorstore.similarity_search("what is the solution for soar throat", k=4)
+# join all context information (top 4) into one string
+context = "\n".join([document.page_content for document in results])
+print(f"Retrieving information related to your question...")
+print(f"Found this content which is most similar to your question: {context}")
