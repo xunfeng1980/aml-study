@@ -60,11 +60,11 @@ async def text_to_speech_stream(text, output_file):
     if len(text) >=  20 or len(text) < 2:
         print(f"{screenshot_uuid} 语音合成内容长度错误 {len(text)} skip: {text}")
         return
-    text = m.correct(text)['target']
+    # text = m.correct(text)['target']
     print(f"{screenshot_uuid} 语音合成内容（修正后）: {text}")
     # Initialize TTS object
     if len(text) > 10:
-        rate = "+65%"
+        rate = "+60%"
     elif len(text) > 7:
         rate = "+50%"
     elif len(text) > 5:
@@ -128,8 +128,11 @@ if __name__ == "__main__":
             # chinese_text: 约是美国国土面积的 1.5 倍
             # text: 就时间而言 过去就在我们脚下
             # chinese_text: 就时间而言 过去就在我们脚下
-            # 如果前面是中文和数字字母组合（可能包含空格），后面是纯英文，则只取前面部分，使用正则表达式
-            match = re.search(r'([\u4e00-\u9fa5\d\.\s]+)([a-zA-Z\s]+)', text)
+            # text: 南极洲汇聚了世界上90%的冰 ninety percent of the world's icelies in Antarctica
+            # chinese_text: 南极洲汇聚了世界上90%的冰
+            # error: 的冰
+            # 如果前面是中文、数字、点号、百分号和空格的组合，后面是纯英文和空格，则只取前面部分，使用正则表达式
+            match = re.search(r'([\u4e00-\u9fa5\d\.\s%]+)(\s+[a-zA-Z\s]+)', text)
             if match:
                 chinese_text = match.group(1)
                 english_text = match.group(2)
@@ -141,6 +144,4 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"{screenshot_uuid} 语音合成失败: {e}")
             last_text = text
-        else:
-            # 等待 x 秒后进行下一次截图
             time.sleep(0.05)
