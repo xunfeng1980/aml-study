@@ -1,23 +1,26 @@
 from io import BytesIO
 import edge_tts
 import asyncio
+import mss
 import pyaudio
 from pydub import AudioSegment
 from pydub.playback import play
 from cnocr import CnOcr
-from PIL import ImageGrab
+from PIL import Image
+
 import time
 import os
 import re
 from pycorrector import Corrector
 import uuid
-import just_playback
+import numpy as np
 
 
 m = Corrector()
 
 CHUNK_SIZE = 20
 VOICE = "zh-CN-XiaoxiaoNeural"
+CROP_RATIO = 0.7
 
 
 async def text_to_speech(text, output_file):
@@ -93,15 +96,25 @@ if __name__ == "__main__":
     os.makedirs("mp3", exist_ok=True)  # 确保 mp3 目录存在
     last_text = "NONE"
     black_list = ["腾讯", "选集"]
+
+    with mss.mss() as sct:
+        monitor = sct.monitors[2 if len(sct.monitors) > 1 else 1]
+
     while True:
         # 使用 PIL 进行后台截图
         screenshot_uuid = str(uuid.uuid4())
 
         # 截取指定区域的截图
-        screenshot = ImageGrab.grab()
+        # screenshot = ImageGrab.grab()
         # 裁剪图片 
-        screenshot = screenshot.crop((0, 1400, 2800, 1746))
-        # screenshot.save("screenshot.png")
+        # screenshot = screenshot.crop((0, 1400, 2800, 1746))
+
+        sct_img = sct.grab(monitor)
+        img = np.array(sct_img)
+        h, w = img.shape[:2]
+        screenshot = img[int(h * CROP_RATIO):h, 0:w]
+        screenshot_pil = Image.fromarray(screenshot)
+        screenshot_pil.save("screenshot.png")
         result = ocr.ocr(screenshot)
         text = " ".join([item['text'] for item in result if isinstance(item, dict) and 'text' in item])
         print(f"{screenshot_uuid} 图片识别内容: {text}")  # 打印图片识别内容
